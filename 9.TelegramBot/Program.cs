@@ -18,11 +18,13 @@ namespace _9.TelegramBot
         static string pathImages = @"Content\Photo\";
         static string pathSounds = @"Content\Sounds\";
         static string pathVideo = @"Content\Video\";
+        static Dictionary<long, User> listUsers=new Dictionary<long, User>();
         static void Main(string[] args)
         {
             string token = "1887811869:AAHxziYTVufs3VTuox-pX735Z6SbDIvkP08";
 
             bot = new TelegramBotClient(token);
+   
             bot.OnMessage += MessageListener;
             bot.StartReceiving();
             Console.ReadKey();
@@ -30,11 +32,37 @@ namespace _9.TelegramBot
 
         private static void MessageListener(object sender, MessageEventArgs e)
         {
-            ////создать юзера с последним сообщением
-            //User user = new User(e.Message.Chat.Id, e.Message.Text);
+            if(!listUsers.ContainsKey(e.Message.Chat.Id))
+            { 
+                listUsers.Add(e.Message.Chat.Id, new User(e.Message.Chat.Id, ""));
+            }
+            User user = listUsers[e.Message.Chat.Id];
+            string currentMessage = e.Message.Text;
+            string backMessage = user.LostMessage;
+            switch (user.LostMessage)
+            {
+                case "/show":
+
+                    string answer = CheckNumber(e.Message.Text, pathContent, e);
+                    if(answer=="hueta")
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        user.LostMessage = currentMessage;
+                        GetList(answer, e);
+                        return;
+                    }
+                    
+            }
+
+            user.LostMessage = currentMessage;
+
             MessageFile file;
             string text = $"{DateTime.Now.ToLongTimeString()}:{e.Message.Chat.FirstName} {e.Message.Chat.Id} {e.Message.Text}";
             Console.WriteLine($"{text} TypeMessage: {e.Message.Type.ToString()}");
+
             switch (e.Message.Type)
             {
                 case Telegram.Bot.Types.Enums.MessageType.Document:
@@ -63,7 +91,8 @@ namespace _9.TelegramBot
                         pathSounds);
                     break;
                 case Telegram.Bot.Types.Enums.MessageType.Text:
-                    switch(e.Message.Text)
+             
+                        switch (e.Message.Text)
                     {
                         case "/help":
                             bot.SendTextMessageAsync(e.Message.Chat.Id, $"Это бот файлообменник. Загрузи что-нибудь от сюда или сохрани сюда");
@@ -71,9 +100,9 @@ namespace _9.TelegramBot
                         case "/start":
                             bot.SendTextMessageAsync(e.Message.Chat.Id, $"Это бот файлообменник. Загрузи что-нибудь от сюда или сохрани сюда");
                             break;
-                        //case "/show":
-                        //    GetList(pathContent, e);
-                        //    break;
+                        case "/show":
+                            GetList(pathContent, e);
+                            break;
                         default:
                             bot.SendTextMessageAsync(e.Message.Chat.Id, "я не понимаю твою команду введи /help и я подскажу тебе");
                             break;
@@ -100,12 +129,12 @@ namespace _9.TelegramBot
 
         }
 
-        static string GetList(string path, MessageEventArgs e)
+        static void GetList(string path, MessageEventArgs e)
         {
             DirectoryInfo di = new DirectoryInfo(path);
             List<string> ListItem = new List<string>();
             string answer;
-            string pathReturn;
+            //string pathReturn;
             foreach (var item in di.GetDirectories())
             {
                 ListItem.Add(item.Name);
@@ -116,31 +145,39 @@ namespace _9.TelegramBot
                 answer += $"\n[{i + 1}]{ListItem[i]}";
             }
             bot.SendTextMessageAsync(e.Message.Chat.Id, answer);
-            int result = CheckNumber(e.Message.Text, 0, ListItem.Count, e);
-            pathReturn = $"{path}/{ListItem[result]}";
-            return pathReturn;
-
-
+            return;
+            //int result = CheckNumber(e.Message.Text, 0, ListItem.Count, e);
+            //pathReturn = $"{path}/{ListItem[result]}";
+            //return pathReturn;     
         }
-        static public int CheckNumber(string text, int min, int max, MessageEventArgs e)
+        static public string CheckNumber(string text, string path, MessageEventArgs e)
         {
-            if(int.TryParse(text,out int result))
+            DirectoryInfo di = new DirectoryInfo(path);
+            List<string> ListItem = new List<string>();
+            foreach (var item in di.GetDirectories())
             {
-                if (result > min && result <= max)
-                {
-                    return result;
-                }
-                else
-                {
-                    CheckNumber(e.Message.Text, min, max, e);
-                    return 0;
-                }
+                ListItem.Add(item.Name);
             }
-            else
+            //int result = CheckNumber(e.Message.Text, 0, ListItem.Count, e);
+            //pathReturn = $"{path}/{ListItem[result]}";
+            if (int.TryParse(text,out int result))
             {
-                CheckNumber(e.Message.Text, min, max, e);
-                return 0;
+                result -= 1;
+                if (result >= 0 && result < ListItem.Count)
+                {
+                    bot.SendTextMessageAsync(e.Message.Chat.Id, "правильный ввод");
+                    string returnPath = $"{path}{ListItem[result]}";
+                    returnPath=returnPath.Replace(@"\\",@"\");
+                    return returnPath;
+                }
+                //else
+                //{
+                //    CheckNumber(e.Message.Text, min, max, e);
+                //    return 0;
+                //}
             }
+            bot.SendTextMessageAsync(e.Message.Chat.Id, "неправильный ввод");
+            return "hueta";
         }
         static async void Loading(string fileId, string path)
 
