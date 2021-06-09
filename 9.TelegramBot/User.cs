@@ -9,6 +9,8 @@ namespace _9.TelegramBot
         public long Id { get; set; }
         public string LostMessage { get; set; }
 
+        public string PathSave { get; set; }
+
        public User(long id,string lostMessage)
         {
             Id = id;

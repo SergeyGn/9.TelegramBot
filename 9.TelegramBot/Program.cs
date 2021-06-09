@@ -6,6 +6,8 @@ using System.Net;
 using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Args;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.InputFiles;
 using static _9.TelegramBot.MessageFile;
 
 namespace _9.TelegramBot
@@ -21,8 +23,15 @@ namespace _9.TelegramBot
         static Dictionary<long, User> listUsers=new Dictionary<long, User>();
         static void Main(string[] args)
         {
-            string token = "1887811869:AAHxziYTVufs3VTuox-pX735Z6SbDIvkP08";
-
+            string token = "00000000000000000000000000000000000000000008";
+            if(!Directory.Exists(pathContent))
+            {
+                Directory.CreateDirectory(pathContent);
+                Directory.CreateDirectory(pathDocuments);
+                Directory.CreateDirectory(pathImages);
+                Directory.CreateDirectory(pathSounds);
+                Directory.CreateDirectory(pathVideo);
+            }
             bot = new TelegramBotClient(token);
    
             bot.OnMessage += MessageListener;
@@ -38,13 +47,14 @@ namespace _9.TelegramBot
             }
             User user = listUsers[e.Message.Chat.Id];
             string currentMessage = e.Message.Text;
-            string backMessage = user.LostMessage;
+            string path=user.PathSave;
             switch (user.LostMessage)
             {
+
                 case "/show":
 
-                    string answer = CheckNumber(e.Message.Text, pathContent, e);
-                    if(answer=="hueta")
+                   string answer = CheckNumber(e.Message.Text, pathContent, e);
+                    if(answer=="null")
                     {
                         return;
                     }
@@ -52,9 +62,19 @@ namespace _9.TelegramBot
                     {
                         user.LostMessage = currentMessage;
                         GetList(answer, e);
+                        user.PathSave = answer;
                         return;
                     }
-                    
+                default:
+                    if (user.PathSave != null)
+                    {
+                        answer = CheckNumber(e.Message.Text, path, e);
+                        bot.SendTextMessageAsync(e.Message.Chat.Id, answer);
+                        Loading(e.Message.Chat.Id, answer);
+                        user.PathSave = null;
+                        return;
+                    }
+                    break;
             }
 
             user.LostMessage = currentMessage;
@@ -62,7 +82,7 @@ namespace _9.TelegramBot
             MessageFile file;
             string text = $"{DateTime.Now.ToLongTimeString()}:{e.Message.Chat.FirstName} {e.Message.Chat.Id} {e.Message.Text}";
             Console.WriteLine($"{text} TypeMessage: {e.Message.Type.ToString()}");
-
+            
             switch (e.Message.Type)
             {
                 case Telegram.Bot.Types.Enums.MessageType.Document:
@@ -95,10 +115,12 @@ namespace _9.TelegramBot
                         switch (e.Message.Text)
                     {
                         case "/help":
-                            bot.SendTextMessageAsync(e.Message.Chat.Id, $"Это бот файлообменник. Загрузи что-нибудь от сюда или сохрани сюда");
+                            bot.SendTextMessageAsync(e.Message.Chat.Id, $"Это бот файлообменник. Загрузи что-нибудь от сюда или сохрани сюда" +
+                                $"\n/show - показывает контент который можно загрузить с сервера");
                             break;
                         case "/start":
-                            bot.SendTextMessageAsync(e.Message.Chat.Id, $"Это бот файлообменник. Загрузи что-нибудь от сюда или сохрани сюда");
+                            bot.SendTextMessageAsync(e.Message.Chat.Id, $"Это бот файлообменник. Загрузи что-нибудь от сюда или сохрани сюда." +
+                                $"Для дополнительной информации воспользуйся командой /help");
                             break;
                         case "/show":
                             GetList(pathContent, e);
@@ -119,6 +141,98 @@ namespace _9.TelegramBot
             if (e.Message.Text == null) return;
         }
 
+
+
+        static void GetList(string path, MessageEventArgs e)
+        {
+            DirectoryInfo di = new DirectoryInfo(path);
+            List<string> ListItem = new List<string>();
+            string answer;
+            if (path == pathContent)
+            {
+                foreach (var item in di.GetDirectories())
+                {
+                    ListItem.Add(item.Name);
+                }
+                answer = $"[1]{ListItem[0]}";
+                for (int i = 1; i < ListItem.Count; i++)
+                {
+                    answer += $"\n[{i + 1}]{ListItem[i]}";
+                }
+            }
+            else
+            {
+                foreach (var item in di.GetFiles())
+                {
+                    ListItem.Add(item.Name);
+                }
+                answer = $"1){ListItem[0]}";
+                for (int i = 1; i < ListItem.Count; i++)
+                {
+                    answer += $"\n{i + 1}){ListItem[i]}";
+                }
+            }
+            bot.SendTextMessageAsync(e.Message.Chat.Id, answer);
+            return;  
+        }
+        static public string CheckNumber(string text, string path, MessageEventArgs e)
+        {
+            DirectoryInfo di = new DirectoryInfo(path);
+            List<string> ListItem = new List<string>();
+            if (path == pathContent)
+            {
+                foreach (var item in di.GetDirectories())
+                {
+                    ListItem.Add(item.Name);
+                }
+            }
+            else
+            {
+                foreach (var item in di.GetFiles())
+                {
+                    ListItem.Add(item.Name);
+                }
+            }
+
+            if (int.TryParse(text,out int result))
+            {
+                result -= 1;
+                if (result >= 0 && result < ListItem.Count)
+                {
+                    string returnPath = $"{path}{ListItem[result]}\\";
+                    return returnPath;
+                }
+            }
+            bot.SendTextMessageAsync(e.Message.Chat.Id, "неправильный ввод");
+            return "null";
+        }
+        static async void Loading(long Id, string path)
+        {
+            path = path.Remove(path.Length-1);
+
+            using (FileStream stream = System.IO.File.OpenRead(path))
+            {
+                string ssf = Path.GetFileName(path);
+                var Iof = new InputOnlineFile(stream, ssf);
+                if (path.Contains(pathDocuments))
+                {
+                    Message ss = await bot.SendDocumentAsync(Id, Iof);
+                }
+                else if (path.Contains(pathImages))
+                {
+                    Message ss = await bot.SendPhotoAsync(Id, Iof);
+                }
+                else if (path.Contains(pathSounds))
+                {
+                    Message ss = await bot.SendAudioAsync(Id, Iof);
+                }
+                else if (path.Contains(pathVideo))
+                {
+                    Message ss = await bot.SendVideoAsync(Id, Iof);
+                }
+            }
+        }
+
         static async void Download(string fileId, string path)  //скачать на компьютер
         {
             var file = await bot.GetFileAsync(fileId);
@@ -127,65 +241,6 @@ namespace _9.TelegramBot
             fs.Close();
             fs.Dispose();
 
-        }
-
-        static void GetList(string path, MessageEventArgs e)
-        {
-            DirectoryInfo di = new DirectoryInfo(path);
-            List<string> ListItem = new List<string>();
-            string answer;
-            //string pathReturn;
-            foreach (var item in di.GetDirectories())
-            {
-                ListItem.Add(item.Name);
-            }
-            answer = $"[1]{ListItem[0]}";
-            for (int i = 1; i < ListItem.Count; i++)
-            {
-                answer += $"\n[{i + 1}]{ListItem[i]}";
-            }
-            bot.SendTextMessageAsync(e.Message.Chat.Id, answer);
-            return;
-            //int result = CheckNumber(e.Message.Text, 0, ListItem.Count, e);
-            //pathReturn = $"{path}/{ListItem[result]}";
-            //return pathReturn;     
-        }
-        static public string CheckNumber(string text, string path, MessageEventArgs e)
-        {
-            DirectoryInfo di = new DirectoryInfo(path);
-            List<string> ListItem = new List<string>();
-            foreach (var item in di.GetDirectories())
-            {
-                ListItem.Add(item.Name);
-            }
-            //int result = CheckNumber(e.Message.Text, 0, ListItem.Count, e);
-            //pathReturn = $"{path}/{ListItem[result]}";
-            if (int.TryParse(text,out int result))
-            {
-                result -= 1;
-                if (result >= 0 && result < ListItem.Count)
-                {
-                    bot.SendTextMessageAsync(e.Message.Chat.Id, "правильный ввод");
-                    string returnPath = $"{path}{ListItem[result]}";
-                    returnPath=returnPath.Replace(@"\\",@"\");
-                    return returnPath;
-                }
-                //else
-                //{
-                //    CheckNumber(e.Message.Text, min, max, e);
-                //    return 0;
-                //}
-            }
-            bot.SendTextMessageAsync(e.Message.Chat.Id, "неправильный ввод");
-            return "hueta";
-        }
-        static async void Loading(string fileId, string path)
-
-        {
-            FileStream fs = new FileStream(path, FileMode.Open);
-            await bot.DownloadFileAsync(path, fs);
-            fs.Close();
-            fs.Dispose();
         }
     }
 }
