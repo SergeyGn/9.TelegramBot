@@ -9,22 +9,21 @@ namespace _9.TelegramBot
         /// <summary>
         /// файл id
         /// </summary>
-        public string FileId { get => _fileId;}
+        public string FileId { get; }
         /// <summary>
         /// имя файла
         /// </summary>
-        public string FileName { get => _fileName; set => _fileName = value; }
-        public string FilePath { get => _filePath; set => _filePath = value; }
+        public string FileName { get; set; }
+        /// <summary>
+        /// прошедший путь пользоватателя
+        /// </summary>
+        public string FilePath { get; set; }
 
-        private string _fileId;
-        private string _fileName;
-        private string _filePath;
-
-       public MessageFile(string FileId, string FileName, string FilePath)
+        public MessageFile(string FileId, string FileName, string FilePath)
         {
-            _fileId = FileId;
-            _fileName = FileName;
-            _filePath = FilePath;
+            this.FileId = FileId;
+            this.FileName = FileName;
+            this.FilePath = FilePath;
         }
     }
 }

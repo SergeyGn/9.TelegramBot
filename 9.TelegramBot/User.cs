@@ -6,15 +6,23 @@ namespace _9.TelegramBot
 {
     class User
     {
+        /// <summary>
+        /// id пользователя
+        /// </summary>
         public long Id { get; set; }
+        /// <summary>
+        /// последнее сообщение пользователя
+        /// </summary>
         public string LostMessage { get; set; }
-
+        /// <summary>
+        /// сохранненый путь пользователя
+        /// </summary>
         public string PathSave { get; set; }
 
-       public User(long id,string lostMessage)
+       public User(long Id,string LostMessage)
         {
-            Id = id;
-            LostMessage = lostMessage;
+            this.Id = Id;
+            this.LostMessage = LostMessage;
         }
     }
 }
